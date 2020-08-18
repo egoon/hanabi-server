@@ -35,7 +35,7 @@ func HandleGameActions(game *model.Game, deck []model.Card) {
 		log.Info("action received")
 		state.PlayedAction = action
 		log.Info("handling action")
-		state, deck = handleAction(action, state, deck)
+		deck = handleAction(action, &state, deck)
 		log.Info("sending state to players")
 		sendStateToPlayers(&state, game.Connections)
 		if state.Ended {
@@ -45,7 +45,7 @@ func HandleGameActions(game *model.Game, deck []model.Card) {
 	}
 }
 
-func handleAction(action model.Action, state model.GameState, deck []model.Card) (model.GameState, []model.Card) {
+func handleAction(action model.Action, state *model.GameState, deck []model.Card) []model.Card {
 	switch action.Type {
 	case model.ActionPing:
 		// do nothing
@@ -64,8 +64,8 @@ func handleAction(action model.Action, state model.GameState, deck []model.Card)
 		}
 		state.Clues = maxClues
 		state.Lives = maxLives
-		state.Deck = len(deck)
 		state.Started = true
+		state.Deck = len(deck)
 	case model.ActionClue:
 		state.Clues--
 		for _, player := range state.Players {
@@ -118,7 +118,7 @@ func handleAction(action model.Action, state model.GameState, deck []model.Card)
 		state.Players = append(state.Players[1:], state.Players[0])
 	}
 	state.PlayedAction = action
-	return state, deck
+	return deck
 }
 
 func isCardPlayable(card model.Card, table []model.Card) bool {
@@ -251,7 +251,7 @@ func ValidateAndCleanAction(action *model.Action, state *model.GameState) error 
 
 func sendStateToPlayers(state *model.GameState, connections map[model.PlayerID]net.Conn) {
 	for playerId, conn := range connections {
-		if state.PlayedAction.Type == "ping" && state.PlayedAction.TargetPlayer != playerId {
+		if state.PlayedAction.Type == "ping" && state.PlayedAction.ActivePlayer != playerId {
 			// only respond to player who pinged
 			continue
 		}

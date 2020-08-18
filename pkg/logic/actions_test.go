@@ -1385,8 +1385,8 @@ func TestHandleAction(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			state, deck := handleAction(tc.action, tc.state, tc.deck)
-			assert.Equal(t, tc.expectedState, state)
+			deck := handleAction(tc.action, &tc.state, tc.deck)
+			assert.Equal(t, tc.expectedState, tc.state)
 			assert.Equal(t, tc.expectedDeck, deck)
 		})
 	}
@@ -1412,11 +1412,13 @@ func TestHandleGameActions(t *testing.T) {
 		State:   nil,
 	}
 	turns := []struct {
+		description   string
 		action        model.Action
 		expectedState model.GameState
 	}{
 		{
-			action: model.Action{Type: model.ActionJoin, ActivePlayer: "Strange"},
+			description: "Action 1: Join Strange",
+			action:      model.Action{Type: model.ActionJoin, ActivePlayer: "Strange"},
 			expectedState: model.GameState{
 				Id:           "game",
 				Players:      []model.Player{{Id: "Strange"}},
@@ -1425,13 +1427,14 @@ func TestHandleGameActions(t *testing.T) {
 				Discards:     []model.Card{},
 				Table:        []model.Card{},
 				Deck:         20,
-				PlayedAction: model.Action{Type: model.ActionJoin},
+				PlayedAction: model.Action{Type: model.ActionJoin, ActivePlayer: "Strange"},
 				Started:      false,
 				Ended:        false,
 			},
 		},
 		{
-			action: model.Action{Type: model.ActionJoin, ActivePlayer: "Charm"},
+			description: "Action 2: Join Charm",
+			action:      model.Action{Type: model.ActionJoin, ActivePlayer: "Charm"},
 			expectedState: model.GameState{
 				Id:           "game",
 				Players:      []model.Player{{Id: "Strange"}, {Id: "Charm"}},
@@ -1440,26 +1443,258 @@ func TestHandleGameActions(t *testing.T) {
 				Discards:     []model.Card{},
 				Table:        []model.Card{},
 				Deck:         20,
-				PlayedAction: model.Action{Type: model.ActionJoin},
+				PlayedAction: model.Action{Type: model.ActionJoin, ActivePlayer: "Charm"},
 				Started:      false,
+				Ended:        false,
+			},
+		},
+		{
+			description: "Action 3: Start",
+			action:      model.Action{Type: model.ActionStart, ActivePlayer: "Strange"},
+			expectedState: model.GameState{
+				Id: "game",
+				Players: []model.Player{
+					{Id: "Strange"},
+					{Id: "Charm", Cards: []model.Card{b1, b1, b2, b3, b4}},
+				},
+				Clues:        8,
+				Lives:        3,
+				Discards:     []model.Card{},
+				Table:        []model.Card{},
+				Deck:         10,
+				PlayedAction: model.Action{Type: model.ActionStart, ActivePlayer: "Strange"},
+				Started:      true,
+				Ended:        false,
+			},
+		},
+		{
+			description: "Action 4: Clue 1",
+			action:      model.Action{Type: model.ActionClue, ActivePlayer: "Strange", TargetPlayer: "Charm", Clue: "1"},
+			expectedState: model.GameState{
+				Id: "game",
+				Players: []model.Player{
+					{Id: "Charm", Cards: []model.Card{b1, b1, b2, b3, b4}},
+					{Id: "Strange"},
+				},
+				Clues:        7,
+				Lives:        3,
+				Discards:     []model.Card{},
+				Table:        []model.Card{},
+				Deck:         10,
+				PlayedAction: model.Action{Type: model.ActionClue, ActivePlayer: "Strange", TargetPlayer: "Charm", Clue: "1", Card: []int{0, 1}},
+				Started:      true,
+				Ended:        false,
+			},
+		},
+		{
+			description: "Action 5: Play B1",
+			action:      model.Action{Type: model.ActionPlay, ActivePlayer: "Charm", Card: []int{0}},
+			expectedState: model.GameState{
+				Id: "game",
+				Players: []model.Player{
+					{Id: "Strange"},
+					{Id: "Charm", Cards: []model.Card{w1, b1, b2, b3, b4}},
+				},
+				Clues:        7,
+				Lives:        3,
+				Discards:     []model.Card{},
+				Table:        []model.Card{b1},
+				Deck:         9,
+				PlayedAction: model.Action{Type: model.ActionPlay, ActivePlayer: "Charm", Card: []int{0}},
+				Started:      true,
+				Ended:        false,
+			},
+		},
+		{
+			description: "Action 6: Clue 2",
+			action:      model.Action{Type: model.ActionClue, ActivePlayer: "Strange", TargetPlayer: "Charm", Clue: "2"},
+			expectedState: model.GameState{
+				Id: "game",
+				Players: []model.Player{
+					{Id: "Charm", Cards: []model.Card{w1, b1, b2, b3, b4}},
+					{Id: "Strange"},
+				},
+				Clues:        6,
+				Lives:        3,
+				Discards:     []model.Card{},
+				Table:        []model.Card{b1},
+				Deck:         9,
+				PlayedAction: model.Action{Type: model.ActionClue, ActivePlayer: "Strange", TargetPlayer: "Charm", Clue: "2", Card: []int{2}},
+				Started:      true,
+				Ended:        false,
+			},
+		},
+		{
+			description: "Action 7: Play B2",
+			action:      model.Action{Type: model.ActionPlay, ActivePlayer: "Charm", Card: []int{2}},
+			expectedState: model.GameState{
+				Id: "game",
+				Players: []model.Player{
+					{Id: "Strange"},
+					{Id: "Charm", Cards: []model.Card{w1, b1, b1, b3, b4}},
+				},
+				Clues:        6,
+				Lives:        3,
+				Discards:     []model.Card{},
+				Table:        []model.Card{b1, b2},
+				Deck:         8,
+				PlayedAction: model.Action{Type: model.ActionPlay, ActivePlayer: "Charm", Card: []int{2}},
+				Started:      true,
+				Ended:        false,
+			},
+		},
+		{
+			description: "Action 8: Clue 3",
+			action:      model.Action{Type: model.ActionClue, ActivePlayer: "Strange", TargetPlayer: "Charm", Clue: "3"},
+			expectedState: model.GameState{
+				Id: "game",
+				Players: []model.Player{
+					{Id: "Charm", Cards: []model.Card{w1, b1, b1, b3, b4}},
+					{Id: "Strange"},
+				},
+				Clues:        5,
+				Lives:        3,
+				Discards:     []model.Card{},
+				Table:        []model.Card{b1, b2},
+				Deck:         8,
+				PlayedAction: model.Action{Type: model.ActionClue, ActivePlayer: "Strange", TargetPlayer: "Charm", Clue: "3", Card: []int{3}},
+				Started:      true,
+				Ended:        false,
+			},
+		},
+		{
+			description: "Action 9: Play B3",
+			action:      model.Action{Type: model.ActionPlay, ActivePlayer: "Charm", Card: []int{3}},
+			expectedState: model.GameState{
+				Id: "game",
+				Players: []model.Player{
+					{Id: "Strange"},
+					{Id: "Charm", Cards: []model.Card{w1, b1, b1, w2, b4}},
+				},
+				Clues:        5,
+				Lives:        3,
+				Discards:     []model.Card{},
+				Table:        []model.Card{b1, b2, b3},
+				Deck:         7,
+				PlayedAction: model.Action{Type: model.ActionPlay, ActivePlayer: "Charm", Card: []int{3}},
+				Started:      true,
+				Ended:        false,
+			},
+		},
+		{
+			description: "Action 8: Clue 4",
+			action:      model.Action{Type: model.ActionClue, ActivePlayer: "Strange", TargetPlayer: "Charm", Clue: "4"},
+			expectedState: model.GameState{
+				Id: "game",
+				Players: []model.Player{
+					{Id: "Charm", Cards: []model.Card{w1, b1, b1, w2, b4}},
+					{Id: "Strange"},
+				},
+				Clues:        4,
+				Lives:        3,
+				Discards:     []model.Card{},
+				Table:        []model.Card{b1, b2, b3},
+				Deck:         7,
+				PlayedAction: model.Action{Type: model.ActionClue, ActivePlayer: "Strange", TargetPlayer: "Charm", Clue: "4", Card: []int{4}},
+				Started:      true,
+				Ended:        false,
+			},
+		},
+		{
+			description: "Action 9: Play B4",
+			action:      model.Action{Type: model.ActionPlay, ActivePlayer: "Charm", Card: []int{4}},
+			expectedState: model.GameState{
+				Id: "game",
+				Players: []model.Player{
+					{Id: "Strange"},
+					{Id: "Charm", Cards: []model.Card{w1, b1, b1, w2, b2}},
+				},
+				Clues:        4,
+				Lives:        3,
+				Discards:     []model.Card{},
+				Table:        []model.Card{b1, b2, b3, b4},
+				Deck:         6,
+				PlayedAction: model.Action{Type: model.ActionPlay, ActivePlayer: "Charm", Card: []int{4}},
+				Started:      true,
+				Ended:        false,
+			},
+		},
+		{
+			description: "Action 10: Clue 1",
+			action:      model.Action{Type: model.ActionClue, ActivePlayer: "Strange", TargetPlayer: "Charm", Clue: "1"},
+			expectedState: model.GameState{
+				Id: "game",
+				Players: []model.Player{
+					{Id: "Charm", Cards: []model.Card{w1, b1, b1, w2, b2}},
+					{Id: "Strange"},
+				},
+				Clues:        3,
+				Lives:        3,
+				Discards:     []model.Card{},
+				Table:        []model.Card{b1, b2, b3, b4},
+				Deck:         6,
+				PlayedAction: model.Action{Type: model.ActionClue, ActivePlayer: "Strange", TargetPlayer: "Charm", Clue: "1", Card: []int{0, 1, 2}},
+				Started:      true,
+				Ended:        false,
+			},
+		},
+		{
+			description: "Action 11: Clue 1",
+			action:      model.Action{Type: model.ActionClue, ActivePlayer: "Charm", TargetPlayer: "Strange", Clue: "1"},
+			expectedState: model.GameState{
+				Id: "game",
+				Players: []model.Player{
+					{Id: "Strange"},
+					{Id: "Charm", Cards: []model.Card{w1, b1, b1, w2, b2}},
+				},
+				Clues:        2,
+				Lives:        3,
+				Discards:     []model.Card{},
+				Table:        []model.Card{b1, b2, b3, b4},
+				Deck:         6,
+				PlayedAction: model.Action{Type: model.ActionClue, ActivePlayer: "Charm", TargetPlayer: "Strange", Clue: "1", Card: []int{0}},
+				Started:      true,
+				Ended:        false,
+			},
+		},
+		{
+			description: "Action 12: Play W1",
+			action:      model.Action{Type: model.ActionPlay, ActivePlayer: "Strange", Card: []int{0}},
+			expectedState: model.GameState{
+				Id: "game",
+				Players: []model.Player{
+					{Id: "Charm", Cards: []model.Card{w1, b1, b1, w2, b2}},
+					{Id: "Strange"},
+				},
+				Clues:        2,
+				Lives:        3,
+				Discards:     []model.Card{},
+				Table:        []model.Card{b1, b2, b3, b4, w1},
+				Deck:         5,
+				PlayedAction: model.Action{Type: model.ActionPlay, ActivePlayer: "Strange", Card: []int{0}},
+				Started:      true,
 				Ended:        false,
 			},
 		},
 	}
 	go HandleGameActions(&game, deck)
 	go func() {
-		<-charmConn.BytesWritten
-		log.Info("charm got state")
+		for {
+			<-charmConn.BytesWritten
+			log.Info("charm got state")
+		}
 	}()
 	for _, turn := range turns {
-		log.Info("play action")
-		actions <- turn.action
-		log.Info("read response")
-		strangeBytes := <-strangeConn.BytesWritten
-		state := model.GameState{}
-		err := json.Unmarshal(strangeBytes, &state)
-		log.Info(state)
-		assert.Nil(t, err, "failed to unmarshal state: ", strangeBytes)
-		assert.Equal(t, turn.expectedState, state)
+		t.Run(turn.description, func(t *testing.T) {
+			log.Info("play action")
+			actions <- turn.action
+			log.Info("read response")
+			strangeBytes := <-strangeConn.BytesWritten
+			state := model.GameState{}
+			err := json.Unmarshal(strangeBytes, &state)
+			log.Info(state)
+			assert.Nil(t, err, "failed to unmarshal state: ", strangeBytes)
+			assert.Equal(t, turn.expectedState, state)
+		})
 	}
 }

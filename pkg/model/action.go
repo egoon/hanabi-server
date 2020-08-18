@@ -13,8 +13,8 @@ const (
 type Action struct {
 	Type         string   `json:"type"`
 	Game         GameID   `json:"game,omitempty"`
-	ActivePlayer PlayerID `json:"player,omitempty"`
-	TargetPlayer PlayerID `json:"player,omitempty"`
+	ActivePlayer PlayerID `json:"activePlayer,omitempty"`
+	TargetPlayer PlayerID `json:"targetPlayer,omitempty"`
 	Card         []int    `json:"card,omitempty"`
 	Clue         string   `json:"clue,omitempty"`
 }

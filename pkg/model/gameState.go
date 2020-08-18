@@ -17,8 +17,8 @@ type GameState struct {
 	Table        []Card   `json:"table"`
 	Deck         int      `json:"deck"`
 	PlayedAction Action   `json:"playedAction"`
-	Started      bool
-	Ended        bool
+	Started      bool     `json:"started"`
+	Ended        bool     `json:"ended"`
 }
 
 type Player struct {
@@ -51,6 +51,8 @@ func (g *GameState) ForPlayer(playerID PlayerID) (GameState, bool) {
 		Table:        g.Table,
 		Deck:         g.Deck,
 		PlayedAction: g.PlayedAction,
+		Started:      g.Started,
+		Ended:        g.Ended,
 	}, ok
 }
 
