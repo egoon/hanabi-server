@@ -19,6 +19,7 @@ type GameState struct {
 	PlayedAction Action   `json:"playedAction"`
 	Started      bool     `json:"started"`
 	Ended        bool     `json:"ended"`
+	Colors       int      `json:"colors"`
 }
 
 type Player struct {
@@ -76,8 +77,8 @@ func CreateDeck() []Card {
 				Color: color,
 				Value: value,
 			}
+			i++
 		}
-		i++
 	}
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(deck), func(i, j int) { deck[i], deck[j] = deck[j], deck[i] })

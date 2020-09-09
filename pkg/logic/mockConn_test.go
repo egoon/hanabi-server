@@ -1,4 +1,4 @@
-package model
+package logic
 
 import (
 	"net"
@@ -19,6 +19,7 @@ type MockConn struct {
 	DeadlineError      error
 	ReadDeadlineError  error
 	WriteDeadlineError error
+	Closed             bool
 }
 
 func (m *MockConn) Read(b []byte) (n int, err error) {
@@ -35,6 +36,7 @@ func (m *MockConn) Write(b []byte) (n int, err error) {
 }
 
 func (m *MockConn) Close() error {
+	m.Closed = true
 	return m.CloseError
 }
 

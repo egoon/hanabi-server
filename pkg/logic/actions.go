@@ -6,8 +6,9 @@ import (
 	"net"
 	"regexp"
 
-	"github.com/egoon/hanabi-server/pkg/model"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/egoon/hanabi-server/pkg/model"
 )
 
 const (
@@ -27,19 +28,19 @@ func HandleGameActions(game *model.Game, deck []model.Card) {
 		PlayedAction: model.Action{},
 		Started:      false,
 		Ended:        false,
+		Colors:       len(deck) / 10,
 	}
 	game.State = &state
 	for {
-		log.Info("waiting for action")
 		action := <-game.Actions
-		log.Info("action received")
 		state.PlayedAction = action
-		log.Info("handling action")
 		deck = handleAction(action, &state, deck)
-		log.Info("sending state to players")
 		sendStateToPlayers(&state, game.Connections)
 		if state.Ended {
-			log.Info("game ended")
+			for _, c := range game.Connections {
+				c.Close()
+			}
+			log.Info("Game ", game.Id, " score: ", len(game.State.Table))
 			break
 		}
 	}
@@ -91,7 +92,7 @@ func handleAction(action model.Action, state *model.GameState, deck []model.Card
 			state.Lives--
 		}
 		hand[action.Card[0]], deck = drawCard(deck)
-		if len(state.Table) == 25 || state.Lives == 0 {
+		if len(state.Table) == state.Colors*5 || state.Lives == 0 {
 			state.Ended = true
 		}
 		state.Players[0].Cards = hand
@@ -143,7 +144,7 @@ func ValidateAndCleanAction(action *model.Action, state *model.GameState) error 
 	case model.ActionPing:
 		action.Card = nil
 		action.Clue = ""
-		action.Game = ""
+		action.GameID = ""
 		action.TargetPlayer = ""
 	case model.ActionCreate:
 		if state != nil {
@@ -156,7 +157,7 @@ func ValidateAndCleanAction(action *model.Action, state *model.GameState) error 
 		if state != nil {
 			return fmt.Errorf("already connected to a game")
 		}
-		if action.Game == "" {
+		if action.GameID == "" {
 			return fmt.Errorf("join action must have game id")
 		}
 		action.Card = nil
@@ -177,7 +178,7 @@ func ValidateAndCleanAction(action *model.Action, state *model.GameState) error 
 		}
 		action.Card = nil
 		action.Clue = ""
-		action.Game = ""
+		action.GameID = ""
 		action.TargetPlayer = ""
 	case model.ActionClue:
 		if state == nil {
@@ -203,7 +204,7 @@ func ValidateAndCleanAction(action *model.Action, state *model.GameState) error 
 		if action.TargetPlayer == action.ActivePlayer {
 			return fmt.Errorf("you may not target yourself")
 		}
-		action.Game = ""
+		action.GameID = ""
 		action.Card = make([]int, 5)[:0]
 	case model.ActionPlay:
 		if state == nil {
@@ -221,7 +222,7 @@ func ValidateAndCleanAction(action *model.Action, state *model.GameState) error 
 		if action.Card[0] < 0 || action.Card[0] >= len(state.Players[0].Cards) {
 			return fmt.Errorf("no card on index %d", action.Card[0])
 		}
-		action.Game = ""
+		action.GameID = ""
 		action.Clue = ""
 		action.TargetPlayer = ""
 	case model.ActionDiscard:
@@ -240,7 +241,7 @@ func ValidateAndCleanAction(action *model.Action, state *model.GameState) error 
 		if action.Card[0] < 0 || action.Card[0] >= len(state.Players[0].Cards) {
 			return fmt.Errorf("no card on index %d", action.Card[0])
 		}
-		action.Game = ""
+		action.GameID = ""
 		action.Clue = ""
 		action.TargetPlayer = ""
 	default:

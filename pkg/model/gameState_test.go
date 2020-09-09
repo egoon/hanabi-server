@@ -127,3 +127,38 @@ func TestGameState_ForPlayer(t *testing.T) {
 		})
 	}
 }
+
+func TestGameState_CreateDeck(t *testing.T) {
+	deck := CreateDeck()
+	assert.Equal(t, 50, len(deck))
+	cards := map[Card]int{}
+	for _, card := range deck {
+		if count, ok := cards[card]; ok {
+			cards[card] = count + 1
+		} else {
+			cards[card] = 1
+		}
+	}
+	assert.Equal(t, 25, len(cards))
+	colors := map[string]int{}
+	for card, cardCount := range cards {
+		if count, ok := colors[card.Color]; ok {
+			colors[card.Color] = count + cardCount
+		} else {
+			colors[card.Color] = cardCount
+		}
+		if card.Value == "1" {
+			assert.Equal(t, 3, cardCount)
+		} else if card.Value == "5" {
+			assert.Equal(t, 1, cardCount)
+		} else if card.Value == "4" || card.Value == "3" || card.Value == "2" {
+			assert.Equal(t, 2, cardCount)
+		} else {
+			assert.Fail(t, card.Value, "is not a valid card value")
+		}
+	}
+	assert.Equal(t, 5, len(colors))
+	for color, count := range colors {
+		assert.Equal(t, 10, count, color, "should have 10 cards")
+	}
+}

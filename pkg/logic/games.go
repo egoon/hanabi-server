@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/egoon/hanabi-server/pkg/model"
-	"github.com/google/uuid"
 )
 
 func HandleNewGames(games map[model.GameID]*model.Game, gameChan chan *model.Game) {
@@ -27,27 +26,32 @@ func ConnectToGame(action model.Action, conn net.Conn, games map[model.GameID]*m
 	playerID := action.ActivePlayer
 	switch action.Type {
 	case "create":
-		_, ok := games[action.Game]
-		if !ok {
+		_, ok := games[action.GameID]
+		if ok {
 			return nil, fmt.Errorf("cannot create game. game already exists")
 		}
 		actions := make(chan model.Action, 5)
 		game := &model.Game{
-			Id: model.GameID(uuid.New().String()),
+			Id: action.GameID,
 			Connections: map[model.PlayerID]net.Conn{
 				playerID: conn,
 			},
 			Actions: actions,
 		}
+		// send game to async game handler function HandleNewGames
 		gameChan <- game
-		go HandleGameActions(game, model.CreateDeck())
+		// create an async func to handle the new games actions
+		go func() {
+			HandleGameActions(game, model.CreateDeck())
+			delete(games, game.Id)
+		}()
 		game.Actions <- model.Action{
 			Type:         "join",
 			ActivePlayer: playerID,
 		}
 		return game, nil
 	case "join":
-		game := games[action.Game]
+		game := games[action.GameID]
 		if game == nil {
 			msg, _ := json.Marshal(model.Error{Err: http.StatusNotFound})
 			conn.Write(msg)
