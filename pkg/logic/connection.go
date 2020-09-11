@@ -11,13 +11,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const readTimeout = 30 //seconds
+
 func HandleConnection(conn net.Conn, games map[model.GameID]*model.Game, gameChan chan *model.Game) {
 	buffer := make([]byte, 200)
 	defer conn.Close()
 	var game *model.Game
 	var playerID model.PlayerID
 	for {
-		err := conn.SetReadDeadline(time.Now().Add(time.Second * 5))
+		err := conn.SetReadDeadline(time.Now().Add(time.Second * readTimeout))
 		if err != nil {
 			log.Warn("set read deadline failed, game:", game.Id, ", player: ", playerID)
 		}
