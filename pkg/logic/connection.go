@@ -14,16 +14,16 @@ import (
 const readTimeout = 30 //seconds
 
 func HandleConnection(conn net.Conn, games map[model.GameID]*model.Game, gameChan chan *model.Game) {
-	buffer := make([]byte, 200)
 	defer conn.Close()
 	var game *model.Game
 	var playerID model.PlayerID
 	for {
+		buffer := make([]byte, 200)
 		err := conn.SetReadDeadline(time.Now().Add(time.Second * readTimeout))
 		if err != nil {
 			log.Warn("set read deadline failed, game:", game.Id, ", player: ", playerID)
 		}
-		_, err = conn.Read(buffer)
+		bytesRead, err := conn.Read(buffer)
 		if err != nil {
 			netErr, ok := err.(net.Error)
 			if ok && netErr.Timeout() {
@@ -38,9 +38,11 @@ func HandleConnection(conn net.Conn, games map[model.GameID]*model.Game, gameCha
 			if err != nil {
 				log.Warn("failed to send message to client: ", err)
 			}
+			break
 		}
+		log.Info("[", string(buffer[:bytesRead]), "]")
 		action := model.Action{}
-		err = json.Unmarshal(buffer, &action)
+		err = json.Unmarshal(buffer[:bytesRead], &action)
 		if err != nil {
 			log.Info("failed to parse incoming action: ", err)
 			msg, _ := json.Marshal(model.Error{Err: http.StatusBadRequest})
