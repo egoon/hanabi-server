@@ -1,10 +1,11 @@
 package logic
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"regexp"
+
+	"github.com/egoon/hanabi-server/pkg/io"
 
 	log "github.com/sirupsen/logrus"
 
@@ -33,12 +34,11 @@ func HandleGameActions(game *model.Game, deck []model.Card) {
 	game.State = &state
 	for {
 		action := <-game.Actions
-		state.PlayedAction = action
 		deck = handleAction(action, &state, deck)
 		sendStateToPlayers(&state, game.Connections)
 		if state.Ended {
 			for _, c := range game.Connections {
-				c.Close()
+				_ = c.Close()
 			}
 			log.Info("Game ", game.Id, " score: ", len(game.State.Table))
 			break
@@ -46,7 +46,7 @@ func HandleGameActions(game *model.Game, deck []model.Card) {
 	}
 }
 
-func handleAction(action model.Action, state *model.GameState, deck []model.Card) []model.Card {
+func handleAction(action *model.Action, state *model.GameState, deck []model.Card) []model.Card {
 	switch action.Type {
 	case model.ActionPing:
 		// do nothing
@@ -118,7 +118,7 @@ func handleAction(action model.Action, state *model.GameState, deck []model.Card
 		}
 		state.Players = append(state.Players[1:], state.Players[0])
 	}
-	state.PlayedAction = action
+	state.PlayedAction = *action
 	return deck
 }
 
@@ -257,8 +257,10 @@ func sendStateToPlayers(state *model.GameState, connections map[model.PlayerID]n
 			continue
 		}
 		playerState, _ := state.ForPlayer(playerId)
-		msg, _ := json.Marshal(playerState)
-		conn.Write(msg)
+		_, err := io.NewJsonWriter(conn).Write(playerState)
+		if err != nil {
+			log.Error("failed to write state to player")
+		}
 	}
 }
 

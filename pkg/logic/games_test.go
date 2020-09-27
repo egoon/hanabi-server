@@ -32,13 +32,13 @@ func TestConnectToGame(t *testing.T) {
 			games: map[model.GameID]*model.Game{"ticTacToe": {
 				Id:          "ticTacToe",
 				Connections: map[model.PlayerID]net.Conn{},
-				Actions:     make(chan model.Action, 5),
+				Actions:     make(chan *model.Action, 5),
 			}},
 			gameChan: make(chan *model.Game, 2),
 			expectedGame: &model.Game{
 				Id:          "ticTacToe",
 				Connections: map[model.PlayerID]net.Conn{"Top": &MockConn{}},
-				Actions:     make(chan model.Action, 5),
+				Actions:     make(chan *model.Action, 5),
 			},
 		},
 		{
@@ -64,13 +64,13 @@ func TestConnectToGame(t *testing.T) {
 			games: map[model.GameID]*model.Game{"ticTacToe": {
 				Id:          "ticTacToe",
 				Connections: map[model.PlayerID]net.Conn{"Top": &MockConn{}},
-				Actions:     make(chan model.Action, 5),
+				Actions:     make(chan *model.Action, 5),
 			}},
 			gameChan: make(chan *model.Game, 2),
 			expectedGame: &model.Game{
 				Id:          "ticTacToe",
 				Connections: map[model.PlayerID]net.Conn{"Top": &MockConn{}},
-				Actions:     make(chan model.Action, 5),
+				Actions:     make(chan *model.Action, 5),
 			},
 		},
 		{
@@ -84,7 +84,7 @@ func TestConnectToGame(t *testing.T) {
 			games: map[model.GameID]*model.Game{"ticTacToe": {
 				Id:          "ticTacToe",
 				Connections: map[model.PlayerID]net.Conn{"Bottom": nil, "Strange": nil, "Charm": nil, "Up": nil, "Down": nil},
-				Actions:     make(chan model.Action, 5),
+				Actions:     make(chan *model.Action, 5),
 			}},
 			gameChan:    make(chan *model.Game, 2),
 			expectedErr: fmt.Errorf("cannot join game. too many connections"),
@@ -102,7 +102,7 @@ func TestConnectToGame(t *testing.T) {
 			expectedGame: &model.Game{
 				Id:          "ticTacToe",
 				Connections: map[model.PlayerID]net.Conn{"Top": &MockConn{}},
-				Actions:     make(chan model.Action, 5),
+				Actions:     make(chan *model.Action, 5),
 			},
 		},
 		{
@@ -116,7 +116,7 @@ func TestConnectToGame(t *testing.T) {
 			games: map[model.GameID]*model.Game{"ticTacToe": {
 				Id:          "ticTacToe",
 				Connections: map[model.PlayerID]net.Conn{},
-				Actions:     make(chan model.Action, 5),
+				Actions:     make(chan *model.Action, 5),
 			}},
 			gameChan:    make(chan *model.Game, 2),
 			expectedErr: fmt.Errorf("cannot create game. game already exists"),
@@ -132,7 +132,7 @@ func TestConnectToGame(t *testing.T) {
 			games: map[model.GameID]*model.Game{"ticTacToe": {
 				Id:          "ticTacToe",
 				Connections: map[model.PlayerID]net.Conn{},
-				Actions:     make(chan model.Action, 5),
+				Actions:     make(chan *model.Action, 5),
 			}},
 			gameChan:    make(chan *model.Game, 2),
 			expectedErr: fmt.Errorf("invalid action: start. not in a game"),
@@ -140,7 +140,7 @@ func TestConnectToGame(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			game, err := ConnectToGame(tc.action, tc.conn, tc.games, tc.gameChan)
+			game, err := ConnectToGame(&tc.action, tc.conn, tc.games, tc.gameChan)
 			if err == nil {
 				assert.Equal(t, tc.expectedGame.Id, game.Id)
 				assert.Equal(t, len(tc.expectedGame.Connections), len(game.Connections))

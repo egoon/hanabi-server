@@ -6,6 +6,8 @@ import (
 	"net"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/egoon/hanabi-server/pkg/model"
@@ -1386,7 +1388,7 @@ func TestHandleAction(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			deck := handleAction(tc.action, &tc.state, tc.deck)
+			deck := handleAction(&tc.action, &tc.state, tc.deck)
 			assert.Equal(t, tc.expectedState, tc.state)
 			assert.Equal(t, tc.expectedDeck, deck)
 		})
@@ -1400,7 +1402,7 @@ func TestHandleGameActions(t *testing.T) {
 		w1, b1, w2, b2, b5,
 		w1, w3, b3, w4, b4,
 	}
-	actions := make(chan model.Action, 5)
+	actions := make(chan *model.Action, 5)
 	strangeConn := &MockConn{BytesWritten: make(chan []byte)}
 	charmConn := &MockConn{BytesWritten: make(chan []byte)}
 	game := model.Game{
@@ -1890,13 +1892,15 @@ func TestHandleGameActions(t *testing.T) {
 	go HandleGameActions(&game, deck)
 	go func() {
 		for {
-			<-charmConn.BytesWritten
+			bytes := <-charmConn.BytesWritten
+			log.Info("charm: [", string(bytes), "]")
 		}
 	}()
 	for _, turn := range turns {
 		t.Run(turn.description, func(t *testing.T) {
-			actions <- turn.action
+			actions <- &turn.action
 			strangeBytes := <-strangeConn.BytesWritten
+			log.Info("[", string(strangeBytes[:len(strangeBytes)-1]), "]")
 			state := model.GameState{}
 			err := json.Unmarshal(strangeBytes, &state)
 			assert.Nil(t, err, "failed to unmarshal state: ", strangeBytes)

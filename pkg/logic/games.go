@@ -1,10 +1,8 @@
 package logic
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
-	"net/http"
 
 	"github.com/egoon/hanabi-server/pkg/model"
 )
@@ -14,7 +12,7 @@ func HandleNewGames(games map[model.GameID]*model.Game, gameChan chan *model.Gam
 		game := <-gameChan
 		if games[game.Id] != nil {
 			for _, conn := range game.Connections {
-				conn.Close()
+				_ = conn.Close()
 			}
 		} else {
 			games[game.Id] = game
@@ -22,7 +20,7 @@ func HandleNewGames(games map[model.GameID]*model.Game, gameChan chan *model.Gam
 	}
 }
 
-func ConnectToGame(action model.Action, conn net.Conn, games map[model.GameID]*model.Game, gameChan chan *model.Game) (*model.Game, error) {
+func ConnectToGame(action *model.Action, conn net.Conn, games map[model.GameID]*model.Game, gameChan chan *model.Game) (*model.Game, error) {
 	playerID := action.ActivePlayer
 	switch action.Type {
 	case "create":
@@ -30,7 +28,7 @@ func ConnectToGame(action model.Action, conn net.Conn, games map[model.GameID]*m
 		if ok {
 			return nil, fmt.Errorf("cannot create game. game already exists")
 		}
-		actions := make(chan model.Action, 5)
+		actions := make(chan *model.Action, 5)
 		game := &model.Game{
 			Id: action.GameID,
 			Connections: map[model.PlayerID]net.Conn{
@@ -45,7 +43,7 @@ func ConnectToGame(action model.Action, conn net.Conn, games map[model.GameID]*m
 			HandleGameActions(game, model.CreateDeck())
 			delete(games, game.Id)
 		}()
-		game.Actions <- model.Action{
+		game.Actions <- &model.Action{
 			Type:         "join",
 			ActivePlayer: playerID,
 		}
@@ -53,24 +51,24 @@ func ConnectToGame(action model.Action, conn net.Conn, games map[model.GameID]*m
 	case "join":
 		game := games[action.GameID]
 		if game == nil {
-			msg, _ := json.Marshal(model.Error{Err: http.StatusNotFound})
-			conn.Write(msg)
+			//msg, _ := json.Marshal(model.Error{Err: http.StatusNotFound})
+			//conn.Write(msg)
 			return nil, fmt.Errorf("cannot join game. game does not exist")
 		}
 		previousConn := game.Connections[playerID]
 		if previousConn != nil {
-			previousConn.Close()
+			_ = previousConn.Close()
 		} else if len(game.Connections) > 4 {
-			msg, _ := json.Marshal(model.Error{Err: http.StatusPreconditionFailed})
-			conn.Write(msg)
+			//msg, _ := json.Marshal(model.Error{Err: http.StatusPreconditionFailed})
+			//conn.Write(msg)
 			return nil, fmt.Errorf("cannot join game. too many connections")
 		}
 		game.Connections[playerID] = conn
 		game.Actions <- action
 		return game, nil
 	default:
-		msg, _ := json.Marshal(model.Error{Err: http.StatusConflict})
-		conn.Write(msg)
+		//msg, _ := json.Marshal(model.Error{Err: http.StatusConflict})
+		//conn.Write(msg)
 		return nil, fmt.Errorf("invalid action: %s. not in a game", action.Type)
 	}
 }
